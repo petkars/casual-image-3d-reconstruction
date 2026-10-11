@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+
+# Data and generated artifacts
+datasets/raw/
+datasets/processed/
+results/*
+!results/.gitkeep
+*.ply
+*.obj
+*.stl
+*.glb
+*.gltf
+*.pcd
+*.mcap
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
