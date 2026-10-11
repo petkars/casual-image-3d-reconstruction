@@ -67,11 +67,13 @@ The tool records files and image metadata only. It does **not** reconstruct a 3D
 ## Planned milestones
 
 - [x] M0: repository scaffold and reproducible image manifest.
-- [ ] M1: choose a baseline and document setup/reconstruction assumptions.
-- [ ] M2: run a first multi-view reconstruction on a small object.
-- [ ] M3: compare reconstruction with reference geometry.
-- [ ] M4: introduce controlled occlusion and quantify reconstruction degradation.
-- [ ] M5: evaluate generative reconstruction and iterative render-and-compare refinement.
+- [ ] M1: run a classical multi-view baseline reconstruction on a small object and document its assumptions.
+- [ ] M2: compare reconstruction with reference geometry.
+- [ ] M3: introduce controlled occlusion and quantify reconstruction degradation.
+- [ ] M4: evaluate image-conditioned generative reconstruction against the baseline.
+- [ ] M5: explore iterative render-and-compare refinement.
+
+See [docs/ROADMAP.md](docs/ROADMAP.md) for details.
 
 ## Experiment principles
 

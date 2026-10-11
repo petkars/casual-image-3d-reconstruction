@@ -38,6 +38,9 @@ def build_manifest(dataset_root: Path) -> dict[str, Any]:
                     width, height = image.size
                     image_format = image.format
                     image.verify()
+                # verify() only checks structure; a full decode catches truncated data.
+                with Image.open(image_path) as image:
+                    image.load()
             except Exception as exc:
                 images.append({
                     "path": image_path.relative_to(root).as_posix(),
