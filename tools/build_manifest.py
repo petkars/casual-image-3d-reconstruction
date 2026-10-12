@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -23,10 +24,12 @@ def main() -> int:
         return 2
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    text = json.dumps(manifest, indent=2) + "\n"
+    args.output.write_text(text, encoding="utf-8")
     print(f"Objects: {manifest['object_count']}")
     print(f"Valid images: {manifest['valid_image_count']}")
     print(f"Manifest: {args.output}")
+    print(f"Manifest SHA-256: {hashlib.sha256(text.encode('utf-8')).hexdigest()}")
     return 0
 
 

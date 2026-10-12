@@ -54,3 +54,18 @@ def test_manifest_flags_truncated_and_corrupt_images(tmp_path: Path):
 def test_manifest_rejects_missing_root(tmp_path: Path):
     with pytest.raises(FileNotFoundError):
         build_manifest(tmp_path / "missing")
+
+
+def test_manifest_skips_hidden_files_and_folders(tmp_path: Path):
+    root = tmp_path / "raw"
+    object_dir = root / "bolt_01"
+    (object_dir / ".thumbnails").mkdir(parents=True)
+    (root / ".cache").mkdir()
+    Image.new("RGB", (8, 8)).save(object_dir / "view_01.png")
+    (object_dir / "._view_01.png").write_bytes(b"AppleDouble metadata")
+    Image.new("RGB", (8, 8)).save(object_dir / ".thumbnails" / "thumb.png")
+
+    manifest = build_manifest(root)
+
+    assert [item["object_id"] for item in manifest["objects"]] == ["bolt_01"]
+    assert [item["path"] for item in manifest["objects"][0]["images"]] == ["bolt_01/view_01.png"]

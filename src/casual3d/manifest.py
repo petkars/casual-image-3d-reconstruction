@@ -18,6 +18,11 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _is_hidden(path: Path, root: Path) -> bool:
+    """True if any component below root starts with '.', e.g. macOS ._view.jpg files."""
+    return any(part.startswith(".") for part in path.relative_to(root).parts)
+
+
 def build_manifest(dataset_root: Path) -> dict[str, Any]:
     """Build a stable manifest from dataset_root/<object_id>/<image_file>."""
     root = dataset_root.expanduser().resolve()
@@ -29,10 +34,11 @@ def build_manifest(dataset_root: Path) -> dict[str, Any]:
     objects: list[dict[str, Any]] = []
     image_count = 0
 
-    for object_dir in sorted(p for p in root.iterdir() if p.is_dir()):
+    for object_dir in sorted(p for p in root.iterdir() if p.is_dir() and not _is_hidden(p, root)):
         images: list[dict[str, Any]] = []
         for image_path in sorted(p for p in object_dir.rglob("*")
-                                 if p.is_file() and p.suffix.lower() in SUPPORTED_EXTENSIONS):
+                                 if p.is_file() and p.suffix.lower() in SUPPORTED_EXTENSIONS
+                                 and not _is_hidden(p, root)):
             try:
                 with Image.open(image_path) as image:
                     width, height = image.size

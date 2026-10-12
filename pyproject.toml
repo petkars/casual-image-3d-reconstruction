@@ -4,10 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "casual-image-3d-reconstruction"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Reproducible experiments for 3D object reconstruction from casual images"
 readme = "README.md"
 requires-python = ">=3.10"
+license = {text = "MIT"}
 dependencies = [
     "Pillow>=10.0",
 ]
@@ -16,6 +17,9 @@ dependencies = [
 dev = [
     "pytest>=8.0",
 ]
+
+[tool.setuptools.dynamic]
+version = {attr = "casual3d.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
