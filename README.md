@@ -53,8 +53,10 @@ datasets/
 Build a manifest:
 
 ```bash
-python tools/build_manifest.py datasets/raw --output results/dataset_manifest.json
+casual3d-manifest datasets/raw --output results/dataset_manifest.json
 ```
+
+(`python tools/build_manifest.py ...` does the same.) The command prints the manifest's SHA-256; record it in [docs/EXPERIMENT_LOG.md](docs/EXPERIMENT_LOG.md). Hidden files and folders (names starting with `.`) are skipped.
 
 Run tests:
 
