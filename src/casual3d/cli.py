@@ -61,6 +61,14 @@ def reconstruct_main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
+    skipped = record["input"]["skipped_files"]
+    if skipped:
+        print(f"Warning: skipped {len(skipped)} unsupported file(s): {', '.join(skipped[:5])}"
+              f"{' ...' if len(skipped) > 5 else ''}", file=sys.stderr)
+        if any(Path(name).suffix.lower() in (".heic", ".heif") for name in skipped):
+            print("Warning: HEIC photos are not read; convert to JPEG or set iPhone "
+                  "Camera > Formats > Most Compatible.", file=sys.stderr)
+
     record_path = args.output / "run.json"
     record_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     result = record["result"]

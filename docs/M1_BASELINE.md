@@ -25,6 +25,14 @@ M1 covers **sparse** reconstruction only. COLMAP's dense multi-view stereo (Patc
 4. Keep the object large in frame and sharp. Discard blurred shots before running.
 5. Copy to `datasets/raw/<object_id>/`.
 
+### iPhone notes
+
+- **JPEG, not HEIC:** set Settings → Camera → Formats → *Most Compatible*, or export as JPEG. HEIC files are skipped (listed under `skipped_files` in `run.json`, with a warning).
+- **One lens:** stay on 1×; do not switch to 0.5×/3×. On Pro models turn off *Macro Control*, which silently switches to the ultra-wide lens up close.
+- No Portrait mode, no flash. Live Photos are fine (only the still is used).
+- Portrait and landscape shots can be mixed: COLMAP reads raw pixels and ignores the EXIF orientation tag, and unedited iPhone photos all share one raw size. Photos edited or rotated in the Photos app may be exported with a different size; the run then stops with a list of sizes — drop those images, export originals, or use `--per-image-camera`.
+- COLMAP takes its starting focal length from EXIF; `run.json` records it under `initial_cameras` (`has_prior_focal_length: true`).
+
 ## Running
 
 ```bash
@@ -48,9 +56,9 @@ casual3d-reconstruct datasets/raw/synthetic_01 --output results/runs/m1_syntheti
 
 - software: pycolmap/COLMAP, Python and platform versions, CUDA availability;
 - config: camera model, camera sharing, matcher, image size cap, random seed;
-- input: every image path with its SHA-256;
+- input: every image path with its SHA-256, plus any skipped (unsupported) files;
 - timings per stage (feature extraction, matching, mapping);
-- result: registered images, 3D points, mean reprojection error (px), mean track length, estimated intrinsics, and the list of **unregistered images** — or the failure reason when no model is built.
+- result: starting intrinsics (from EXIF where available), registered images, 3D points, mean reprojection error (px), mean track length, estimated intrinsics, and the list of **unregistered images** — or the failure reason when no model is built.
 
 Copy the key numbers into [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md).
 

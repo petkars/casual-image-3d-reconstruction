@@ -7,6 +7,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from PIL import Image
+
 from casual3d.manifest import SUPPORTED_EXTENSIONS, is_hidden, sha256_file
 
 MATCHERS = ("exhaustive", "sequential")
@@ -43,21 +45,48 @@ def list_images(image_dir: Path) -> list[str]:
     )
 
 
+def list_skipped_files(image_dir: Path) -> list[str]:
+    """Non-hidden files that list_images ignores, e.g. iPhone .HEIC photos or .AAE sidecars."""
+    return sorted(
+        p.relative_to(image_dir).as_posix()
+        for p in image_dir.rglob("*")
+        if p.is_file() and p.suffix.lower() not in SUPPORTED_EXTENSIONS and not is_hidden(p, image_dir)
+    )
+
+
+def _check_single_image_size(image_dir: Path, image_names: list[str]) -> None:
+    """COLMAP silently drops images whose size differs from the shared camera's; fail loudly instead."""
+    sizes: dict[tuple[int, int], list[str]] = {}
+    for name in image_names:
+        with Image.open(image_dir / name) as image:
+            sizes.setdefault(image.size, []).append(name)
+    if len(sizes) > 1:
+        summary = "; ".join(
+            f"{width}x{height}: {len(names)} image(s), e.g. {names[0]}"
+            for (width, height), names in sorted(sizes.items(), key=lambda item: -len(item[1]))
+        )
+        raise ValueError(
+            f"Images have different sizes ({summary}). A shared camera needs one size: "
+            "remove or re-export the odd images, or use --per-image-camera."
+        )
+
+
+def _camera_record(camera: Any) -> dict[str, Any]:
+    return {
+        "model": camera.model.name,
+        "width": camera.width,
+        "height": camera.height,
+        "params": [float(value) for value in camera.params],
+    }
+
+
 def _summarise_model(reconstruction: Any) -> dict[str, Any]:
     return {
         "registered_images": reconstruction.num_reg_images(),
         "points3D": reconstruction.num_points3D(),
         "mean_reprojection_error_px": reconstruction.compute_mean_reprojection_error(),
         "mean_track_length": reconstruction.compute_mean_track_length(),
-        "cameras": [
-            {
-                "model": camera.model.name,
-                "width": camera.width,
-                "height": camera.height,
-                "params": [float(value) for value in camera.params],
-            }
-            for _, camera in sorted(reconstruction.cameras.items())
-        ],
+        "cameras": [_camera_record(camera) for _, camera in sorted(reconstruction.cameras.items())],
     }
 
 
@@ -80,6 +109,9 @@ def run_sparse_reconstruction(
     image_names = list_images(image_dir)
     if len(image_names) < 2:
         raise ValueError(f"Need at least 2 images, found {len(image_names)} in {image_dir}")
+
+    if config.single_camera:
+        _check_single_image_size(image_dir, image_names)
 
     pycolmap = import_pycolmap()
     pycolmap.set_random_seed(config.random_seed)
@@ -108,6 +140,12 @@ def run_sparse_reconstruction(
         extraction_options=extraction_options,
     )
     timings["feature_extraction"] = time.perf_counter() - start
+    # Starting intrinsics; the focal length comes from EXIF when has_prior_focal_length is true.
+    with pycolmap.Database.open(database_path) as database:
+        initial_cameras = [
+            {**_camera_record(camera), "has_prior_focal_length": bool(camera.has_prior_focal_length)}
+            for camera in sorted(database.read_all_cameras(), key=lambda camera: camera.camera_id)
+        ]
 
     stage_start = time.perf_counter()
     if config.matcher == "exhaustive":
@@ -121,7 +159,7 @@ def run_sparse_reconstruction(
     timings["mapping"] = time.perf_counter() - stage_start
     timings["total"] = time.perf_counter() - start
 
-    result: dict[str, Any] = {"num_models": len(models)}
+    result: dict[str, Any] = {"num_models": len(models), "initial_cameras": initial_cameras}
     outputs: dict[str, str] = {"database": database_path.name}
     if models:
         best_index, best = max(models.items(), key=lambda item: (item[1].num_reg_images(), -item[0]))
@@ -157,6 +195,7 @@ def run_sparse_reconstruction(
             "image_dir_name": image_dir.name,
             "image_count": len(image_names),
             "images": [{"path": name, "sha256": sha256_file(image_dir / name)} for name in image_names],
+            "skipped_files": list_skipped_files(image_dir),
         },
         "timings_s": timings,
         "result": result,

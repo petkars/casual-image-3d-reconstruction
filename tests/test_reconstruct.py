@@ -5,7 +5,7 @@ import pytest
 from PIL import Image
 
 from casual3d.cli import reconstruct_main
-from casual3d.reconstruct import SparseConfig, list_images, run_sparse_reconstruction
+from casual3d.reconstruct import SparseConfig, list_images, list_skipped_files, run_sparse_reconstruction
 
 
 def test_list_images_skips_hidden_and_unsupported(tmp_path: Path):
@@ -14,6 +14,21 @@ def test_list_images_skips_hidden_and_unsupported(tmp_path: Path):
         (tmp_path / name).write_bytes(b"")
 
     assert list_images(tmp_path) == ["a.PNG", "b.jpg", "sub/c.png"]
+    assert list_skipped_files(tmp_path) == ["notes.txt"]
+
+
+def test_cli_warns_about_heic_photos(tmp_path: Path, capsys):
+    pytest.importorskip("pycolmap")
+    from casual3d.synthetic import make_synthetic_object
+
+    images = make_synthetic_object(tmp_path / "images", num_views=8)
+    (images / "IMG_0001.HEIC").write_bytes(b"heic data")
+
+    assert reconstruct_main([str(images), "--output", str(tmp_path / "run")]) == 0
+
+    record = json.loads((tmp_path / "run" / "run.json").read_text(encoding="utf-8"))
+    assert record["input"]["skipped_files"] == ["IMG_0001.HEIC"]
+    assert "Most Compatible" in capsys.readouterr().err
 
 
 def test_rejects_non_empty_output_dir(tmp_path: Path):
@@ -25,6 +40,17 @@ def test_rejects_non_empty_output_dir(tmp_path: Path):
 
     with pytest.raises(FileExistsError):
         run_sparse_reconstruction(images, output)
+
+
+def test_rejects_mixed_image_sizes_with_shared_camera(tmp_path: Path):
+    images = tmp_path / "images"
+    images.mkdir()
+    Image.new("RGB", (64, 48)).save(images / "landscape.jpg")
+    Image.new("RGB", (48, 64)).save(images / "rotated.jpg")
+
+    with pytest.raises(ValueError, match="per-image-camera"):
+        run_sparse_reconstruction(images, tmp_path / "run")
+    assert not (tmp_path / "run").exists()
 
 
 def test_rejects_unknown_matcher(tmp_path: Path):
@@ -49,6 +75,8 @@ def test_synthetic_object_reconstructs_all_views(tmp_path: Path):
     assert result["best_model"]["mean_reprojection_error_px"] < 2.0
     assert record["input"]["image_count"] == 8
     assert all(len(image["sha256"]) == 64 for image in record["input"]["images"])
+    assert record["input"]["skipped_files"] == []
+    assert len(record["result"]["initial_cameras"]) == 1
     assert (output / "points3D.ply").is_file()
     assert (output / "sparse" / str(result["best_model_index"])).is_dir()
 
