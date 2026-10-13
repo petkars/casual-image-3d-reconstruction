@@ -1,0 +1,68 @@
+import json
+from pathlib import Path
+
+import pytest
+from PIL import Image
+
+from casual3d.cli import reconstruct_main
+from casual3d.reconstruct import SparseConfig, list_images, run_sparse_reconstruction
+
+
+def test_list_images_skips_hidden_and_unsupported(tmp_path: Path):
+    (tmp_path / "sub").mkdir()
+    for name in ("b.jpg", "a.PNG", "sub/c.png", "._b.jpg", "notes.txt"):
+        (tmp_path / name).write_bytes(b"")
+
+    assert list_images(tmp_path) == ["a.PNG", "b.jpg", "sub/c.png"]
+
+
+def test_rejects_non_empty_output_dir(tmp_path: Path):
+    images = tmp_path / "images"
+    images.mkdir()
+    output = tmp_path / "run"
+    output.mkdir()
+    (output / "stale.txt").write_text("old run")
+
+    with pytest.raises(FileExistsError):
+        run_sparse_reconstruction(images, output)
+
+
+def test_rejects_unknown_matcher(tmp_path: Path):
+    with pytest.raises(ValueError):
+        run_sparse_reconstruction(tmp_path, tmp_path / "run", SparseConfig(matcher="magic"))
+
+
+def test_synthetic_object_reconstructs_all_views(tmp_path: Path):
+    pytest.importorskip("pycolmap")
+    from casual3d.synthetic import make_synthetic_object
+
+    images = make_synthetic_object(tmp_path / "images", num_views=8)
+    output = tmp_path / "run"
+
+    assert reconstruct_main([str(images), "--output", str(output)]) == 0
+
+    record = json.loads((output / "run.json").read_text(encoding="utf-8"))
+    result = record["result"]
+    assert result["status"] == "success"
+    assert result["best_model"]["registered_images"] == 8
+    assert result["unregistered_images"] == []
+    assert result["best_model"]["mean_reprojection_error_px"] < 2.0
+    assert record["input"]["image_count"] == 8
+    assert all(len(image["sha256"]) == 64 for image in record["input"]["images"])
+    assert (output / "points3D.ply").is_file()
+    assert (output / "sparse" / str(result["best_model_index"])).is_dir()
+
+
+def test_unrelated_images_are_recorded_as_failure(tmp_path: Path):
+    pytest.importorskip("pycolmap")
+    images = tmp_path / "images"
+    images.mkdir()
+    for index in range(3):
+        Image.new("RGB", (64, 64), color=(index * 80, 0, 0)).save(images / f"flat_{index}.png")
+    output = tmp_path / "run"
+
+    assert reconstruct_main([str(images), "--output", str(output)]) == 1
+
+    record = json.loads((output / "run.json").read_text(encoding="utf-8"))
+    assert record["result"]["status"] == "failed"
+    assert len(record["result"]["unregistered_images"]) == 3

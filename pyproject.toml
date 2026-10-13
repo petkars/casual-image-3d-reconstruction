@@ -17,9 +17,13 @@ dependencies = [
 dev = [
     "pytest>=8.0",
 ]
+recon = [
+    "pycolmap>=4.2,<5",
+]
 
 [project.scripts]
 casual3d-manifest = "casual3d.cli:main"
+casual3d-reconstruct = "casual3d.cli:reconstruct_main"
 
 [tool.setuptools.dynamic]
 version = {attr = "casual3d.__version__"}

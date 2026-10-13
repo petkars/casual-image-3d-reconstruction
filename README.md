@@ -23,9 +23,10 @@ Build an experimental pipeline that starts with ordinary images of an object and
 
 ## Repository status
 
-**Milestone 0 — project scaffold and dataset manifest tool.**
+**Milestone 1 — classical sparse baseline (in progress).**
 
-The first tool scans a dataset organised by object, checks supported image files, records image dimensions and SHA-256 hashes, and writes a deterministic JSON manifest.
+- M0 (done): a manifest tool scans a dataset organised by object, checks supported image files, records image dimensions and SHA-256 hashes, and writes a deterministic JSON manifest.
+- M1: a COLMAP sparse structure-from-motion baseline recovers camera poses and a sparse point cloud, and records versions, settings, input hashes, timings and failure modes for every run. It is verified on synthetic data; the first real-object run is next. See [docs/M1_BASELINE.md](docs/M1_BASELINE.md).
 
 ## Quick start
 
@@ -34,7 +35,7 @@ Requires Python 3.10+.
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -e ".[dev]"
+python -m pip install -e ".[dev,recon]"   # recon installs pycolmap
 ```
 
 Organise images like this:
@@ -58,18 +59,28 @@ casual3d-manifest datasets/raw --output results/dataset_manifest.json
 
 (`python tools/build_manifest.py ...` does the same.) The command prints the manifest's SHA-256; record it in [docs/EXPERIMENT_LOG.md](docs/EXPERIMENT_LOG.md). Hidden files and folders (names starting with `.`) are skipped.
 
+Reconstruct one object (sparse point cloud and camera poses; scale is arbitrary):
+
+```bash
+casual3d-reconstruct datasets/raw/bolt_01 --output results/runs/m1_bolt_01
+```
+
+This writes `run.json`, the COLMAP model and `points3D.ply` to the run folder. Capture guidance, assumptions and options are in [docs/M1_BASELINE.md](docs/M1_BASELINE.md).
+
 Run tests:
 
 ```bash
 pytest
 ```
 
-The tool records files and image metadata only. It does **not** reconstruct a 3D model yet.
+Reconstruction tests are skipped if pycolmap is not installed. If pytest fails to start because of plugins from another environment (e.g. ROS), run `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest`.
+
+Dense reconstruction and meshing are not implemented yet; see the roadmap.
 
 ## Planned milestones
 
 - [x] M0: repository scaffold and reproducible image manifest.
-- [ ] M1: run a classical multi-view baseline reconstruction on a small object and document its assumptions.
+- [ ] M1 (in progress): run a classical multi-view baseline reconstruction on a small object and document its assumptions.
 - [ ] M2: compare reconstruction with reference geometry.
 - [ ] M3: introduce controlled occlusion and quantify reconstruction degradation.
 - [ ] M4: evaluate image-conditioned generative reconstruction against the baseline.
