@@ -1,4 +1,4 @@
-"""Command-line entry points: dataset manifests and the sparse reconstruction baseline."""
+"""Command-line entry points: dataset manifests, the sparse reconstruction baseline, pose evaluation."""
 from __future__ import annotations
 
 import argparse
@@ -83,6 +83,45 @@ def reconstruct_main(argv: list[str] | None = None) -> int:
     print(f"Total time: {record['timings_s']['total']:.1f} s")
     print(f"Run record: {record_path}")
     return 0 if result["status"] == "success" else 1
+
+
+def evaluate_poses_main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Compare a run's camera poses with a reference COLMAP model (e.g. synthetic ground truth)."
+    )
+    parser.add_argument("run_dir", type=Path, help="Run folder from casual3d-reconstruct, or a COLMAP model folder")
+    parser.add_argument("reference_model", type=Path, help="Reference COLMAP model folder")
+    parser.add_argument("--output", type=Path, help="Default: <run_dir>/pose_evaluation.json")
+    args = parser.parse_args(argv)
+
+    run_record = args.run_dir / "run.json"
+    if run_record.is_file():
+        model_dir = json.loads(run_record.read_text(encoding="utf-8"))["outputs"].get("model_dir")
+        if model_dir is None:
+            print(f"error: run produced no model: {run_record}", file=sys.stderr)
+            return 2
+        estimated_model = args.run_dir / model_dir
+    else:
+        estimated_model = args.run_dir
+    output = args.output or args.run_dir / "pose_evaluation.json"
+
+    from casual3d.evaluate import evaluate_poses
+
+    try:
+        evaluation = evaluate_poses(estimated_model, args.reference_model)
+    except (OSError, ValueError, RuntimeError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    output.write_text(json.dumps(evaluation, indent=2) + "\n", encoding="utf-8")
+    print(f"Images compared: {evaluation['common_images']}/{evaluation['reference_images']}")
+    print(f"Rotation error (deg): median {evaluation['rotation_error_deg']['median']:.3f}, "
+          f"max {evaluation['rotation_error_deg']['max']:.3f}")
+    print(f"Position error (% of scene size): median {100 * evaluation['position_error_relative']['median']:.2f}, "
+          f"max {100 * evaluation['position_error_relative']['max']:.2f}")
+    print(f"Focal length error (%): median {100 * evaluation['focal_length_error_relative']['median']:.2f}")
+    print(f"Evaluation: {output}")
+    return 0
 
 
 if __name__ == "__main__":

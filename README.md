@@ -26,7 +26,7 @@ Build an experimental pipeline that starts with ordinary images of an object and
 **Milestone 1 — classical sparse baseline (in progress).**
 
 - M0 (done): a manifest tool scans a dataset organised by object, checks supported image files, records image dimensions and SHA-256 hashes, and writes a deterministic JSON manifest.
-- M1: a COLMAP sparse structure-from-motion baseline recovers camera poses and a sparse point cloud, and records versions, settings, input hashes, timings and failure modes for every run. It is verified on synthetic data; the first real-object run is next. See [docs/M1_BASELINE.md](docs/M1_BASELINE.md).
+- M1: a COLMAP sparse structure-from-motion baseline recovers camera poses and a sparse point cloud, and records versions, settings, input hashes, timings and failure modes for every run. It is verified against ground-truth camera poses on synthetic data (`casual3d-evaluate-poses`); the first real-object run is next. See [docs/M1_BASELINE.md](docs/M1_BASELINE.md).
 
 ## Quick start
 

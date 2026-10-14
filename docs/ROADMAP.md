@@ -16,6 +16,7 @@
 - Obtain a reference mesh or scan for at least one object.
 - Align reconstructed and reference geometry carefully.
 - Report scale ambiguity where applicable, Chamfer distance, completeness and outlier behaviour.
+- Started: camera-pose evaluation against a reference model (`casual3d-evaluate-poses`, similarity alignment), used on synthetic ground truth in M1.
 
 ## M3 — controlled occlusion
 - Create reproducible view subsets and occlusion conditions.

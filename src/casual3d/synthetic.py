@@ -7,9 +7,16 @@ from casual3d.reconstruct import import_pycolmap
 
 
 def make_synthetic_object(
-    output_dir: Path, num_views: int = 8, num_points: int = 150, seed: int = 0
+    output_dir: Path,
+    num_views: int = 8,
+    num_points: int = 150,
+    seed: int = 0,
+    ground_truth_dir: Path | None = None,
 ) -> Path:
     """Render num_views 640x480 images of a random textured point set into output_dir.
+
+    If ground_truth_dir is given, the true cameras and points are written there as a
+    COLMAP model, for use with casual3d-evaluate-poses.
 
     Defaults are tuned so COLMAP registers every view; denser point sets make the
     rendered feature patches overlap and matching degrades.
@@ -17,6 +24,8 @@ def make_synthetic_object(
     pycolmap = import_pycolmap()
     if output_dir.exists() and any(output_dir.iterdir()):
         raise FileExistsError(f"Output directory is not empty: {output_dir}")
+    if ground_truth_dir is not None and ground_truth_dir.exists() and any(ground_truth_dir.iterdir()):
+        raise FileExistsError(f"Ground-truth directory is not empty: {ground_truth_dir}")
     output_dir.mkdir(parents=True, exist_ok=True)
     pycolmap.set_random_seed(seed)
 
@@ -30,4 +39,7 @@ def make_synthetic_object(
     options.camera_params = [800.0, 320.0, 240.0, 0.0]
     ground_truth = pycolmap.synthesize_dataset(options)
     pycolmap.synthesize_images(pycolmap.SyntheticImageOptions(), ground_truth, output_dir)
+    if ground_truth_dir is not None:
+        ground_truth_dir.mkdir(parents=True, exist_ok=True)
+        ground_truth.write(ground_truth_dir)
     return output_dir

@@ -46,9 +46,12 @@ Use `--matcher sequential` for video frames or strictly ordered captures. Exit c
 To sanity-check the pipeline without photos:
 
 ```bash
-python tools/make_synthetic_object.py datasets/raw/synthetic_01
+python tools/make_synthetic_object.py datasets/raw/synthetic_01 --ground-truth datasets/ground_truth/synthetic_01
 casual3d-reconstruct datasets/raw/synthetic_01 --output results/runs/m1_synthetic_01
+casual3d-evaluate-poses results/runs/m1_synthetic_01 datasets/ground_truth/synthetic_01
 ```
+
+The last step aligns the estimated camera centres to the true ones with a similarity transform (SfM scale is arbitrary), then writes `pose_evaluation.json` with rotation error (degrees), position error (absolute and as a fraction of scene size), focal length error and any images missing from the reconstruction. Real captures have no ground truth; this checks the pipeline itself.
 
 ## What each run records
 
