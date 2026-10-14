@@ -65,7 +65,7 @@ Reconstruct one object (sparse point cloud and camera poses; scale is arbitrary)
 casual3d-reconstruct datasets/raw/bolt_01 --output results/runs/m1_bolt_01
 ```
 
-This writes `run.json`, the COLMAP model and `points3D.ply` to the run folder. Capture guidance, assumptions and options are in [docs/M1_BASELINE.md](docs/M1_BASELINE.md).
+This writes `run.json`, the COLMAP model, `points3D.ply` and `cameras.ply` (camera positions) to the run folder. Capture guidance, assumptions and options are in [docs/M1_BASELINE.md](docs/M1_BASELINE.md).
 
 Run tests:
 

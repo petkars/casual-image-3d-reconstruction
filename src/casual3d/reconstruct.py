@@ -90,12 +90,39 @@ def _summarise_model(reconstruction: Any) -> dict[str, Any]:
     }
 
 
+def export_cameras_ply(reconstruction: Any, path: Path) -> int:
+    """Write registered camera centres as red points (sorted by image name); return the count.
+
+    Open next to points3D.ply in MeshLab or CloudCompare to see where each photo was taken.
+    """
+    images = sorted((image for image in reconstruction.images.values() if image.has_pose),
+                    key=lambda image: image.name)
+    lines = [
+        "ply",
+        "format ascii 1.0",
+        "comment camera centres, one per registered image, sorted by image name",
+        f"element vertex {len(images)}",
+        "property double x",
+        "property double y",
+        "property double z",
+        "property uchar red",
+        "property uchar green",
+        "property uchar blue",
+        "end_header",
+    ]
+    for image in images:
+        x, y, z = (float(value) for value in image.projection_center())
+        lines.append(f"{x:.9g} {y:.9g} {z:.9g} 255 0 0")
+    path.write_text("\n".join(lines) + "\n", encoding="ascii")
+    return len(images)
+
+
 def run_sparse_reconstruction(
     image_dir: Path, output_dir: Path, config: SparseConfig = SparseConfig()
 ) -> dict[str, Any]:
     """Run feature extraction, matching and incremental mapping; return the run record.
 
-    Writes database.db, sparse/<model>/, points3D.ply (largest model) to output_dir.
+    Writes database.db, sparse/<model>/, points3D.ply and cameras.ply (largest model) to output_dir.
     A run that registers no images is returned with status "failed", not raised.
     """
     image_dir = image_dir.expanduser().resolve()
@@ -165,13 +192,14 @@ def run_sparse_reconstruction(
         best_index, best = max(models.items(), key=lambda item: (item[1].num_reg_images(), -item[0]))
         registered = {image.name for image in best.images.values() if image.has_pose}
         best.export_PLY(output_dir / "points3D.ply")
+        export_cameras_ply(best, output_dir / "cameras.ply")
         result.update(
             status="success",
             best_model_index=best_index,
             best_model=_summarise_model(best),
             unregistered_images=[name for name in image_names if name not in registered],
         )
-        outputs.update(model_dir=f"sparse/{best_index}", points_ply="points3D.ply")
+        outputs.update(model_dir=f"sparse/{best_index}", points_ply="points3D.ply", cameras_ply="cameras.ply")
     else:
         result.update(
             status="failed",

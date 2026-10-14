@@ -52,7 +52,7 @@ casual3d-reconstruct datasets/raw/synthetic_01 --output results/runs/m1_syntheti
 
 ## What each run records
 
-`results/runs/<experiment_id>/` contains `database.db`, `sparse/<model>/` (COLMAP binary model), `points3D.ply` for the largest model, and `run.json` with:
+`results/runs/<experiment_id>/` contains `database.db`, `sparse/<model>/` (COLMAP binary model), `points3D.ply` and `cameras.ply` (registered camera centres as red points — open both in MeshLab or CloudCompare to check the camera ring around the object) for the largest model, and `run.json` with:
 
 - software: pycolmap/COLMAP, Python and platform versions, CUDA availability;
 - config: camera model, camera sharing, matcher, image size cap, random seed;

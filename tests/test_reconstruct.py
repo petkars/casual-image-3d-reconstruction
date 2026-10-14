@@ -78,6 +78,9 @@ def test_synthetic_object_reconstructs_all_views(tmp_path: Path):
     assert record["input"]["skipped_files"] == []
     assert len(record["result"]["initial_cameras"]) == 1
     assert (output / "points3D.ply").is_file()
+    camera_ply = (output / "cameras.ply").read_text(encoding="ascii").splitlines()
+    assert "element vertex 8" in camera_ply
+    assert len(camera_ply) == camera_ply.index("end_header") + 1 + 8
     assert (output / "sparse" / str(result["best_model_index"])).is_dir()
 
 
