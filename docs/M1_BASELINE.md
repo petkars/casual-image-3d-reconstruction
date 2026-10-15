@@ -65,6 +65,16 @@ The last step aligns the estimated camera centres to the true ones with a simila
 
 Copy the key numbers into [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md).
 
+## Where it breaks (synthetic sweep)
+
+`python tools/sweep_synthetic.py results/sweeps/<name> --quiet` reconstructs a grid of synthetic objects (view count × texture density × seed) and writes `sweep.csv` and `summary.md`. The 2026-10-15 sweep ([EXPERIMENT_LOG.md](EXPERIMENT_LOG.md)) found:
+
+- **Too few views:** with medium texture, 3 views failed in 2 of 3 runs; 4+ views always registered. Recall (F-score) kept improving up to 12 views.
+- **Crowded/repetitive texture:** with 400 overlapping features, at most one starting pair of images registered at any view count. Expect the same on repetitive patterns (tiles, fabric, grids).
+- **When registration works, poses are accurate:** median rotation error 0.09–0.28°.
+
+For real captures this supports the protocol above: many overlapping views, and distinctive, non-repeating texture.
+
 ## M1 is done when
 
 - [x] Pipeline implemented, tested, and verified on synthetic data.

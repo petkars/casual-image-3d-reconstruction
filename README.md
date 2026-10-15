@@ -23,10 +23,11 @@ Build an experimental pipeline that starts with ordinary images of an object and
 
 ## Repository status
 
-**Milestone 1 — classical sparse baseline (in progress).**
+**Milestone 1 — classical sparse baseline (waiting for the first real capture); M2 — geometry evaluation (metrics in place).**
 
 - M0 (done): a manifest tool scans a dataset organised by object, checks supported image files, records image dimensions and SHA-256 hashes, and writes a deterministic JSON manifest.
-- M1: a COLMAP sparse structure-from-motion baseline recovers camera poses and a sparse point cloud, and records versions, settings, input hashes, timings and failure modes for every run. It is verified against ground-truth camera poses on synthetic data (`casual3d-evaluate-poses`); the first real-object run is next. See [docs/M1_BASELINE.md](docs/M1_BASELINE.md).
+- M1: a COLMAP sparse structure-from-motion baseline recovers camera poses and a sparse point cloud, and records versions, settings, input hashes, timings and failure modes for every run. It is verified against ground-truth camera poses on synthetic data (`casual3d-evaluate-poses`), and a synthetic sweep maps where it breaks (too few views, repetitive texture). The first real-object run is next. See [docs/M1_BASELINE.md](docs/M1_BASELINE.md).
+- M2: pose and point-cloud metrics (rotation/position error, accuracy, completeness, Chamfer, precision/recall/F-score) after similarity alignment (`casual3d-evaluate-geometry`). Real objects still need reference geometry. See [docs/M2_EVALUATION.md](docs/M2_EVALUATION.md).
 
 ## Quick start
 
@@ -81,7 +82,7 @@ Dense reconstruction and meshing are not implemented yet; see the roadmap.
 
 - [x] M0: repository scaffold and reproducible image manifest.
 - [ ] M1 (in progress): run a classical multi-view baseline reconstruction on a small object and document its assumptions.
-- [ ] M2: compare reconstruction with reference geometry.
+- [ ] M2 (in progress): compare reconstruction with reference geometry.
 - [ ] M3: introduce controlled occlusion and quantify reconstruction degradation.
 - [ ] M4: evaluate image-conditioned generative reconstruction against the baseline.
 - [ ] M5: explore iterative render-and-compare refinement.

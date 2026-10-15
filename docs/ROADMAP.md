@@ -12,11 +12,12 @@
 - Record software versions, camera assumptions, runtime and failure modes.
 - Baseline: COLMAP sparse SfM via pycolmap — see [M1_BASELINE.md](M1_BASELINE.md).
 
-## M2 — geometry evaluation
+## M2 — geometry evaluation (in progress)
 - Obtain a reference mesh or scan for at least one object.
 - Align reconstructed and reference geometry carefully.
 - Report scale ambiguity where applicable, Chamfer distance, completeness and outlier behaviour.
-- Started: camera-pose evaluation against a reference model (`casual3d-evaluate-poses`, similarity alignment), used on synthetic ground truth in M1.
+- Done on synthetic ground truth: camera-pose evaluation (`casual3d-evaluate-poses`, similarity alignment) and point-cloud metrics (`casual3d-evaluate-geometry`: accuracy, completeness, Chamfer, precision/recall/F-score) — see [M2_EVALUATION.md](M2_EVALUATION.md).
+- Next: reference mesh for a real object, mesh sampling, ICP alignment, metric scale.
 
 ## M3 — controlled occlusion
 - Create reproducible view subsets and occlusion conditions.
