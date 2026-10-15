@@ -20,12 +20,14 @@ dev = [
 recon = [
     "numpy>=1.24",
     "pycolmap>=4.2,<5",
+    "scipy>=1.10",
 ]
 
 [project.scripts]
 casual3d-manifest = "casual3d.cli:main"
 casual3d-reconstruct = "casual3d.cli:reconstruct_main"
 casual3d-evaluate-poses = "casual3d.cli:evaluate_poses_main"
+casual3d-evaluate-geometry = "casual3d.cli:evaluate_geometry_main"
 
 [tool.setuptools.dynamic]
 version = {attr = "casual3d.__version__"}

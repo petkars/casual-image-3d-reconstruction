@@ -1,4 +1,4 @@
-"""Command-line entry points: dataset manifests, the sparse reconstruction baseline, pose evaluation."""
+"""Command-line entry points: dataset manifests, the sparse reconstruction baseline, evaluation."""
 from __future__ import annotations
 
 import argparse
@@ -85,6 +85,15 @@ def reconstruct_main(argv: list[str] | None = None) -> int:
     return 0 if result["status"] == "success" else 1
 
 
+def _run_model_dir(run_dir: Path) -> Path | None:
+    """The model folder of a casual3d-reconstruct run, or run_dir itself if it has no run.json."""
+    run_record = run_dir / "run.json"
+    if not run_record.is_file():
+        return run_dir
+    model_dir = json.loads(run_record.read_text(encoding="utf-8"))["outputs"].get("model_dir")
+    return run_dir / model_dir if model_dir else None
+
+
 def evaluate_poses_main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Compare a run's camera poses with a reference COLMAP model (e.g. synthetic ground truth)."
@@ -94,15 +103,10 @@ def evaluate_poses_main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", type=Path, help="Default: <run_dir>/pose_evaluation.json")
     args = parser.parse_args(argv)
 
-    run_record = args.run_dir / "run.json"
-    if run_record.is_file():
-        model_dir = json.loads(run_record.read_text(encoding="utf-8"))["outputs"].get("model_dir")
-        if model_dir is None:
-            print(f"error: run produced no model: {run_record}", file=sys.stderr)
-            return 2
-        estimated_model = args.run_dir / model_dir
-    else:
-        estimated_model = args.run_dir
+    estimated_model = _run_model_dir(args.run_dir)
+    if estimated_model is None:
+        print(f"error: run produced no model: {args.run_dir / 'run.json'}", file=sys.stderr)
+        return 2
     output = args.output or args.run_dir / "pose_evaluation.json"
 
     from casual3d.evaluate import evaluate_poses
@@ -120,6 +124,69 @@ def evaluate_poses_main(argv: list[str] | None = None) -> int:
     print(f"Position error (% of scene size): median {100 * evaluation['position_error_relative']['median']:.2f}, "
           f"max {100 * evaluation['position_error_relative']['max']:.2f}")
     print(f"Focal length error (%): median {100 * evaluation['focal_length_error_relative']['median']:.2f}")
+    print(f"Evaluation: {output}")
+    return 0
+
+
+def evaluate_geometry_main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Compare a run's sparse points with reference geometry (accuracy, completeness, F-score)."
+    )
+    parser.add_argument("run_dir", type=Path, help="Run folder from casual3d-reconstruct, or a COLMAP model folder")
+    parser.add_argument("reference", type=Path, help="Reference points: .ply file or COLMAP model folder")
+    alignment = parser.add_mutually_exclusive_group()
+    alignment.add_argument("--alignment", type=Path,
+                           help="pose_evaluation.json whose alignment_transform maps the run into the "
+                                "reference frame (default: <run_dir>/pose_evaluation.json)")
+    alignment.add_argument("--no-alignment", action="store_true",
+                           help="Run points are already in the reference frame")
+    parser.add_argument("--min-track-length", type=int, default=0,
+                        help="Only evaluate run points seen in at least this many images (default: all)")
+    parser.add_argument("--output", type=Path, help="Default: <run_dir>/geometry_evaluation.json")
+    args = parser.parse_args(argv)
+
+    estimated_model = _run_model_dir(args.run_dir)
+    if estimated_model is None:
+        print(f"error: run produced no model: {args.run_dir / 'run.json'}", file=sys.stderr)
+        return 2
+    alignment_path = None if args.no_alignment else args.alignment or args.run_dir / "pose_evaluation.json"
+    if alignment_path is not None and not alignment_path.is_file():
+        print(f"error: no alignment file {alignment_path}; run casual3d-evaluate-poses first "
+              "or pass --no-alignment", file=sys.stderr)
+        return 2
+    output = args.output or args.run_dir / "geometry_evaluation.json"
+
+    from casual3d.geometry import apply_similarity, evaluate_geometry, load_points
+
+    try:
+        estimated = load_points(estimated_model, min_track_length=args.min_track_length)
+        reference = load_points(args.reference)
+        transform = None
+        if alignment_path is not None:
+            transform = json.loads(alignment_path.read_text(encoding="utf-8")).get("alignment_transform")
+            if transform is None:
+                raise ValueError(f"{alignment_path} has no alignment_transform; re-run casual3d-evaluate-poses")
+            estimated = apply_similarity(estimated, transform)
+        evaluation = evaluate_geometry(estimated, reference)
+    except (OSError, ValueError, RuntimeError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    evaluation = {
+        "schema_version": 1,
+        "kind": "geometry_evaluation",
+        "estimated": str(estimated_model),
+        "reference": str(args.reference),
+        "alignment": str(alignment_path) if alignment_path else "none (same frame)",
+        "min_track_length": args.min_track_length,
+        **evaluation,
+    }
+    output.write_text(json.dumps(evaluation, indent=2) + "\n", encoding="utf-8")
+    print(f"Points: estimated {evaluation['estimated_points']}, reference {evaluation['reference_points']}")
+    print(f"Chamfer: {100 * evaluation['chamfer_relative']:.2f}% of reference diagonal")
+    for row in evaluation["thresholds"]:
+        print(f"tau {100 * row['relative_threshold']:.1f}%: precision {row['precision']:.3f}, "
+              f"recall {row['recall']:.3f}, F-score {row['f_score']:.3f}")
     print(f"Evaluation: {output}")
     return 0
 

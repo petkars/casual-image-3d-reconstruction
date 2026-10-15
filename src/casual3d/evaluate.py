@@ -85,6 +85,12 @@ def evaluate_poses(estimated_model_dir: Path, reference_model_dir: Path) -> dict
         "common_images": len(common),
         "missing_images": sorted(reference_by_name.keys() - estimated_by_name.keys()),
         "alignment_scale": scale,
+        # Maps estimated world coordinates into the reference frame: x_ref = scale * R @ x_est + t.
+        "alignment_transform": {
+            "scale": scale,
+            "rotation": rotation.tolist(),
+            "translation": translation.tolist(),
+        },
         "reference_scene_size": scene_size,
         "rotation_error_deg": _stats(rotation_errors),
         "position_error": _stats(position_errors),
